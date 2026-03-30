@@ -4,15 +4,16 @@ from EmotionDetection import emotion_detector
 app = Flask(__name__)
 
 # Flask route as requested
-@app.route('/emotionDetector', methods=['POST'])
+@app.route('/emotionDetector', methods=['GET', 'POST'])
 def detect_emotion():
-    # Get statement from the form or JSON
-    text_to_analyze = request.form.get('statement') or request.json.get('statement')
+    # Get text from GET query or POST form/JSON
+    text_to_analyze = request.args.get('textToAnalyze') or request.form.get('statement') or (request.json and request.json.get('statement'))
     
-    # Run the emotion detector function
+    if not text_to_analyze:
+        return "No text provided", 400
+    
     result = emotion_detector(text_to_analyze)
     
-    # Format response as requested
     response_text = (
         f"For the given statement, the system response is "
         f"'anger': {result['anger']}, "
