@@ -1,19 +1,29 @@
-from flask import Flask, request, render_template
+from flask import Flask, request, render_template, jsonify
 from EmotionDetection import emotion_detector
 
 app = Flask(__name__)
 
-# Flask route as requested
 @app.route('/emotionDetector', methods=['GET', 'POST'])
 def detect_emotion():
-    # Get text from GET query or POST form/JSON
-    text_to_analyze = request.args.get('textToAnalyze') or request.form.get('statement') or (request.json and request.json.get('statement'))
-    
-    if not text_to_analyze:
-        return "No text provided", 400
-    
+    # Get text safely
+    text_to_analyze = None
+    if request.method == 'GET':
+        text_to_analyze = request.args.get('textToAnalyze')
+    if request.method == 'POST' and request.form.get('statement'):
+        text_to_analyze = request.form.get('statement')
+    if request.method == 'POST' and request.is_json:
+        text_to_analyze = request.json.get('statement')
+
+    # Handle blank input or None dominant emotion
+    if not text_to_analyze or text_to_analyze.strip() == "":
+        return "Invalid text! Please try again!", 200  # <- changed from 400
+     
     result = emotion_detector(text_to_analyze)
-    
+
+    if result['dominant_emotion'] is None:
+        return "Invalid text! Please try again!", 200  # <- changed from 400
+
+    # Normal response
     response_text = (
         f"For the given statement, the system response is "
         f"'anger': {result['anger']}, "
@@ -23,10 +33,8 @@ def detect_emotion():
         f"'sadness': {result['sadness']}. "
         f"The dominant emotion is {result['dominant_emotion']}."
     )
-    
     return response_text
 
-# Optional: serve index.html at root
 @app.route('/')
 def index():
     return render_template('index.html')
